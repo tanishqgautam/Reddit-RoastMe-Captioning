@@ -1,10 +1,10 @@
 # Overview
 The Transformer, a model architecture eschewing recurrence and instead relying entirely on an attention mechanism to draw global dependencies between input and output. The Transformer architecture allows for significantly more parallelization and can reach new state of the art results in translation quality.
 
-This Transformer uses the architecture defined in the Attention is all you need paper. I have implemented a BLEU evaluation metric along with a Greedy Search approach.
+This Transformer uses the architecture defined in the Attention is all you need paper. I have implemented a BLEU evaluation metric along with a Greedy Search approach.  
 
+Scaled Dot Product Attention
 ```python
-# Scaled Dot Product Attention
 
 def scaled_dot_product_attention(q, k, v, mask):
 
@@ -21,8 +21,10 @@ def scaled_dot_product_attention(q, k, v, mask):
   output = tf.matmul(attention_weights, v) 
 
   return output, attention_weights
+  ```
   
-  # Multi Head Attention
+ Multi Head Attention
+```python
   class MultiHeadAttention(tf.keras.layers.Layer):
   def __init__(self, d_model, num_heads):
     super(MultiHeadAttention, self).__init__()
@@ -66,3 +68,4 @@ def scaled_dot_product_attention(q, k, v, mask):
     output = self.dense(concat_attention)  
         
     return output, attention_weights
+ ```
