@@ -3,6 +3,34 @@ The Transformer, a model architecture eschewing recurrence and instead relying e
 
 This Transformer uses the architecture defined in the Attention is all you need paper. I have implemented a BLEU evaluation metric along with a Greedy Search approach.  
 
+Visualize Image and Captions
+```python
+npic = 5
+npix = 224
+target_size = (npix,npix,3)
+
+count = 1
+fig = plt.figure(figsize=(10,20))
+for jpgfnm in uni_filenames[25:30]:
+    filename = image_path + '/' + jpgfnm
+    captions = list(data["caption"].loc[data["filename"]==jpgfnm].values)
+    image_load = load_img(filename, target_size=target_size)
+    
+    ax = fig.add_subplot(npic,2,count,xticks=[],yticks=[])
+    ax.imshow(image_load)
+    count += 1
+    
+    ax = fig.add_subplot(npic,2,count)
+    plt.axis('off')
+    ax.plot()
+    ax.set_xlim(0,1)
+    ax.set_ylim(0,len(captions))
+    for i, caption in enumerate(captions):
+        ax.text(0,i,caption,fontsize=20)
+    count += 1
+plt.show()
+```
+
 Scaled Dot Product Attention
 ```python
 
