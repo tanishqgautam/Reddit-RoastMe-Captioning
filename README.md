@@ -3,6 +3,105 @@ The Transformer, a model architecture eschewing recurrence and instead relying e
 
 This Transformer uses the architecture defined in the Attention is all you need paper. I have implemented a BLEU evaluation metric along with a Greedy Search approach.  
 
+The first step of the project was to scrap reddit for Images and captions. This was then converted into a dataframe for further processing.   
+
+Reddit Api
+```python
+import praw
+import datetime as dt
+from prawcore.sessions import RetryStrategy
+from psaw import PushshiftAPI
+import os
+import cv2
+import urllib
+import numpy as np
+import re
+from urllib.error import HTTPError
+from urllib.request import urlopen
+from praw.models import MoreComments
+
+
+reddit = praw.Reddit(client_id='T0RqyDTVX3icGw', client_secret='JcA4SgxjUdMZfL2iyEaGx2bMIh3omA', user_agent='roastme')
+api = PushshiftAPI(reddit)
+
+subreddit = reddit.subreddit('RoastMe')
+for submission in subreddit.top(limit=5):
+    print(submission)
+
+for submission in subreddit.top(limit=1):
+    print(submission.title)
+    print(submission.url)
+    print(submission.comments)
+
+
+start_epoch=int(dt.datetime(2019, 1, 1).timestamp())
+new_list  = list(api.search_submissions(after=start_epoch,
+                                        # sort_type='score',
+                                        subreddit='RoastMe'
+                                        ,filter=['url','author', 'title', 'subreddit'],limit=300000))
+                                        
+```
+Reddit Scraping for Image and 10 Captions
+```python
+for submission in new_list:    
+    iteration = iteration + 1   
+    print("On iteration : {}".format(iteration))        
+    comment_counter = 0
+    
+    if submission in all_post_ids :    
+        duplicates = duplicates + 1
+        print("Duplicates found until now : {}".format(duplicates))
+        continue
+
+    if len(submission.comments) < 20:
+        print("Skipping less comment of {}".format(submission.id))
+        continue
+        
+    elif str(submission.url).split(".")[-1] == "jpg":
+        all_post_ids.append(str(submission.id))
+        new_post_ids.append(str(submission.id))
+        print(submission.url)
+        
+        try:  
+            with urllib.request.urlopen(submission.url) as url:
+                arr = np.asarray(bytearray(url.read()), dtype=np.uint8)
+                if arr.shape == (503,):
+                    continue
+    
+                rgb_img = cv2.imdecode(arr, -1) 
+                cv2.imwrite(os.path.join('/Users/tanishqgautam/Documents/RoastMe/image_data',str(submission.id)+".jpg"),rgb_img)
+                
+
+        except HTTPError as e:   
+            if e.code == 502:
+                @RetryStrategy(urllib.error.URLError, tries=4, delay=3, backoff=2)
+                def urlopen_with_retry():
+                    return urllib.request.urlopen(submission.url)
+                urlopen_with_retry()
+                
+            if e.reason == 'Not Found':
+                continue
+            else:
+                print ('Failure: ' + str(e.reason))
+                
+        for comment in submission.comments:
+            if isinstance(comment, MoreComments):                              
+                continue              
+            if comment_counter == 10 :              
+                break
+                
+            a = comment.body
+            if len(str(a).split("\n")) == 1 and len(a) < 90 and len(a) > 7:
+                comment_counter = comment_counter + 1                   
+                a_filtered = " ".join(re.findall(r"[a-zA-Z0-9]+", str(a))).lower()           
+                print("{}.jpg#{}\t{}".format(submission.id,comment_counter,a_filtered))
+                comments_data.write("{}.jpg#{}\t{}\n".format(submission.id,comment_counter,a_filtered))
+                
+    else:
+        continue
+
+```
+
 Visualize Image and Captions
 ```python
 npic = 5
@@ -97,3 +196,39 @@ def scaled_dot_product_attention(q, k, v, mask):
         
     return output, attention_weights
  ```
+ Evaluate 
+ ```python
+ def evaluate(image):
+
+  temp_input = tf.expand_dims(load_image(image)[0], 0)
+  img_tensor_val = image_features_extract_model(temp_input)
+  img_tensor_val = tf.reshape(img_tensor_val, (img_tensor_val.shape[0], -1, img_tensor_val.shape[3]))
+  
+  start_token = tokenizer.word_index['<start>']
+  end_token = tokenizer.word_index['<end>']
+   
+  #decoder input is start token
+  decoder_input = [start_token]
+  output = tf.expand_dims(decoder_input, 0) #token
+  result = [] #word list
+
+  for i in range(200):
+      dec_mask = create_masks_decoder(output)
+  
+      # predictions.shape == (batch_size, seq_len, vocab_size)
+      predictions, attention_weights = transformer(img_tensor_val,output,False,dec_mask)
+      
+      # select the last word from the seq_len dimension
+      predictions = predictions[: ,-1:, :]  # (batch_size, 1, vocab_size)
+
+      predicted_id = tf.cast(tf.argmax(predictions, axis=-1), tf.int32)
+      # return the result if the predicted_id is equal to the end token
+      if predicted_id == end_token:
+          return result,tf.squeeze(output, axis=0), attention_weights
+      # concatentate the predicted_id to the output which is given to the decoder
+      # as its input.
+      result.append(tokenizer.index_word[int(predicted_id)])
+      output = tf.concat([output, predicted_id], axis=-1)
+
+  return result,tf.squeeze(output, axis=0), attention_weights
+```
