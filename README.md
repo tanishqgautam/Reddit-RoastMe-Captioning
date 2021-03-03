@@ -4,6 +4,7 @@ The Transformer, a model architecture eschewing recurrence and instead relying e
 This Transformer uses the architecture defined in the Attention is all you need paper. I have implemented a BLEU evaluation metric along with a Greedy Search approach.  
 
 The first step of the project was to scrap reddit for Images and captions. This was then converted into a dataframe for further processing.   
+The dataset can be found [Here](https://www.kaggle.com/ligtfeather/roastme6k)
 
 Reddit Api
 ```python
